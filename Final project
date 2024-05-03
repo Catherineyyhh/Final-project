@@ -1,0 +1,70 @@
+#Training
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression, Lasso
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+
+# Load the Excel file
+url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
+df = pd.read_excel(url, header=None)
+
+# Compute the inflation rate
+df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+
+# Extract features and target
+X = df.iloc[5:].T
+y = df.iloc[1]
+
+# Remove the first row (it contains NaN due to the shift operation)
+X = X.iloc[1:]
+y = y.iloc[1:]
+
+# Function to generate lagged features
+def create_lagged_features(X, y, lag):
+    X_lagged = pd.concat([X.shift(i) for i in range(lag)], axis=1)
+    y_lagged = y.shift(-lag)
+    return X_lagged, y_lagged
+
+# AR(1) method
+X_lagged, y_lagged = create_lagged_features(X, y, 1)
+X_train, y_train = X_lagged.iloc[:-1], y_lagged.iloc[:-1]
+X_val, y_val = X_lagged.iloc[-1:], y_lagged.iloc[-1:]
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_val)
+mse = mean_squared_error(y_val, y_pred)
+print(f"AR(1) MSE: {mse}")
+
+plt.plot(y_val.index, y_val, label='Actual')
+plt.plot(y_val.index, y_pred, label='Predicted')
+plt.legend()
+plt.show()
+
+#Testing
+# Load the testing dataset
+url_test = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_testing_fake.xlsx"
+df_test = pd.read_excel(url_test, header=None)
+
+# Compute the inflation rate
+df_test.iloc[1] = (np.log(df_test.iloc[1]) - np.log(df_test.iloc[1].shift(1))) * 12
+
+# Extract features
+X_test = df_test.iloc[5:].T
+
+# Remove the first row (it contains NaN due to the shift operation)
+X_test = X_test.iloc[1:]
+
+# Create lagged features
+X_test_lagged, _ = create_lagged_features(X_test, None, 1)
+
+# Use the trained model to make predictions
+y_pred_test = model.predict(X_test_lagged)
+
+# Visualize the results
+plt.plot(X_test_lagged.index, y_pred_test, label='Predicted')
+plt.legend()
+plt.show()
