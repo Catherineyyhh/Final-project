@@ -27,7 +27,7 @@ def create_lagged_features(X, y, lag):
     y_lagged = y.shift(-lag)
     return X_lagged, y_lagged
 
-# AR(1) method
+# AR method
 X_lagged, y_lagged = create_lagged_features(X, y, 1)
 X_train, y_train = X_lagged.iloc[:-1], y_lagged.iloc[:-1]
 X_val, y_val = X_lagged.iloc[-1:], y_lagged.iloc[-1:]
