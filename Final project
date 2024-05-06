@@ -1,70 +1,644 @@
-#Training
+##AR(1) method training
+#For 1 month model
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import LinearRegression, Lasso
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
+from statsmodels.tsa.ar_model import AutoReg
 
-# Load the Excel file
+# Load the data
 url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
 df = pd.read_excel(url, header=None)
 
 # Compute the inflation rate
 df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
 
-# Extract features and target
+# Transform the predictors
+for i in range(5, df.shape[0]):
+    df.iloc[i] = (np.log(df.iloc[i]) - np.log(df.iloc[i].shift(1))) * 12
+
+# Prepare the data for machine learning
 X = df.iloc[5:].T
 y = df.iloc[1]
 
-# Remove the first row (it contains NaN due to the shift operation)
+# Remove the first row as it contains NaN
 X = X.iloc[1:]
 y = y.iloc[1:]
 
-# Function to generate lagged features
-def create_lagged_features(X, y, lag):
-    X_lagged = pd.concat([X.shift(i) for i in range(lag)], axis=1)
-    y_lagged = y.shift(-lag)
-    return X_lagged, y_lagged
+# Implement time series cross-validation
+tscv = TimeSeriesSplit(n_splits=5)
 
-# AR method
-X_lagged, y_lagged = create_lagged_features(X, y, 1)
-X_train, y_train = X_lagged.iloc[:-1], y_lagged.iloc[:-1]
-X_val, y_val = X_lagged.iloc[-1:], y_lagged.iloc[-1:]
+for train_index, test_index in tscv.split(X):
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
-model = LinearRegression()
-model.fit(X_train, y_train)
+    # Train an AR(1) model
+    model = AutoReg(y_train, lags=1)
+    model_fit = model.fit()
 
-y_pred = model.predict(X_val)
-mse = mean_squared_error(y_val, y_pred)
-print(f"AR(1) MSE: {mse}")
+    # Make predictions
+    y_pred = model_fit.predict(start=len(y_train), end=len(y_train)+len(y_test)-1, dynamic=False)
 
-plt.plot(y_val.index, y_val, label='Actual')
-plt.plot(y_val.index, y_pred, label='Predicted')
-plt.legend()
-plt.show()
+    # Evaluate the model
+    mse = mean_squared_error(y_test, y_pred)
+    print(f"Mean Squared Error: {mse}")
 
-#Testing
-# Load the testing dataset
-url_test = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_testing_fake.xlsx"
-df_test = pd.read_excel(url_test, header=None)
+# Train the AR(1) model on the entire dataset
+model = AutoReg(y, lags=1)
+model_fit = model.fit()
+
+# Forecast the inflation rate 1 month ahead
+forecast = model_fit.predict(start=len(y), end=len(y), dynamic=False)
+print(f"Forecast for 1 month ahead: {forecast}")
+
+#For 3 month model
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+from statsmodels.tsa.ar_model import AutoReg
+
+# Load the data
+url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
+df = pd.read_excel(url, header=None)
+
+# Compute the inflation rate
+df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+
+# Transform the predictors
+for i in range(5, df.shape[0]):
+    df.iloc[i] = (np.log(df.iloc[i]) - np.log(df.iloc[i].shift(1))) * 12
+
+# Prepare the data for machine learning
+X = df.iloc[5:].T
+y = df.iloc[1]
+
+# Shift y 3 months ahead
+y = y.shift(-3)
+
+# Remove the first 3 rows as they contain NaN
+X = X.iloc[3:]
+y = y.iloc[3:]
+
+# Implement time series cross-validation
+tscv = TimeSeriesSplit(n_splits=5)
+
+for train_index, test_index in tscv.split(X):
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+    # Train an AR(1) model
+    model = AutoReg(y_train, lags=1)
+    model_fit = model.fit()
+
+    # Make predictions
+    y_pred = model_fit.predict(start=len(y_train), end=len(y_train)+len(y_test)-1, dynamic=False)
+
+    # Evaluate the model
+    mse = mean_squared_error(y_test, y_pred)
+    print(f"Mean Squared Error: {mse}")
+
+# Train the AR(1) model on the entire dataset
+model = AutoReg(y, lags=1)
+model_fit = model.fit()
+
+# Forecast the inflation rate 3 months ahead
+forecast = model_fit.predict(start=len(y), end=len(y)+2, dynamic=False)
+print(f"Forecast for 3 months ahead: {forecast[-1]}")
+
+#For 12 month model
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+from statsmodels.tsa.ar_model import AutoReg
+
+# Load the data
+url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
+df = pd.read_excel(url, header=None)
+
+# Compute the inflation rate
+df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+
+# Transform the predictors
+for i in range(5, df.shape[0]):
+    df.iloc[i] = (np.log(df.iloc[i]) - np.log(df.iloc[i].shift(1))) * 12
+
+# Prepare the data for machine learning
+X = df.iloc[5:].T
+y = df.iloc[1]
+
+# Shift y 12 months ahead
+y = y.shift(-12)
+
+# Remove the first 12 rows as they contain NaN
+X = X.iloc[12:]
+y = y.iloc[12:]
+
+# Implement time series cross-validation
+tscv = TimeSeriesSplit(n_splits=5)
+
+for train_index, test_index in tscv.split(X):
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+    # Train an AR(1) model
+    model = AutoReg(y_train, lags=1)
+    model_fit = model.fit()
+
+    # Make predictions
+    y_pred = model_fit.predict(start=len(y_train), end=len(y_train)+len(y_test)-1, dynamic=False)
+
+    # Evaluate the model
+    mse = mean_squared_error(y_test, y_pred)
+    print(f"Mean Squared Error: {mse}")
+
+# Train the AR(1) model on the entire dataset
+model = AutoReg(y, lags=1)
+model_fit = model.fit()
+
+# Forecast the inflation rate 12 months ahead
+forecast = model_fit.predict(start=len(y), end=len(y)+11, dynamic=False)
+print(f"Forecast for 12 months ahead: {forecast[-1]}")
+
+##Testing
+# Load the testing data
+test_url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_testing_fake.xlsx"
+test_df = pd.read_excel(test_url, header=None)
+
+# Compute the inflation rate for the testing data
+test_df.iloc[1] = (np.log(test_df.iloc[1]) - np.log(test_df.iloc[1].shift(1))) * 12
+
+# Transform the predictors for the testing data
+for i in range(5, test_df.shape[0]):
+    test_df.iloc[i] = (np.log(test_df.iloc[i]) - np.log(test_df.iloc[i].shift(1))) * 12
+
+# Prepare the testing data for machine learning
+X_test = test_df.iloc[5:].T
+y_test = test_df.iloc[1]
+
+# Remove the first 12 rows as they contain NaN
+X_test = X_test.iloc[12:]
+y_test = y_test.iloc[12:]
+
+# Make predictions on the testing data
+y_pred = model_fit.predict(start=len(y), end=len(y)+len(y_test)-1, dynamic=False)
+
+# Evaluate the model on the testing data
+mse = mean_squared_error(y_test, y_pred)
+print(f"Mean Squared Error on testing data: {mse}")
+
+
+
+
+
+
+
+##LASSO metheod training
+#For 1 month model
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LassoCV
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import TimeSeriesSplit
+import math
+
+# Load the data
+url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
+df = pd.read_excel(url, header=None)
+
+# Compute the inflation rate
+df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+
+# Transform the predictors into log difference
+df.iloc[5:] = (np.log(df.iloc[5:]) - np.log(df.iloc[5:].shift(1))) * 12
+
+# Prepare the data for machine learning
+X = df.iloc[5:].T
+y = df.iloc[1]
+
+# Remove the first row (NaN value due to the shift operation)
+X = X.iloc[1:]
+y = y.iloc[1:]
+
+# Implement a time series split for cross-validation
+tscv = TimeSeriesSplit(n_splits=5)
+
+# Train a LASSO regression model
+model = LassoCV(cv=tscv)
+model.fit(X, y)
+
+# Evaluate the model
+mse = mean_squared_error(y, model.predict(X))
+rmse = math.sqrt(mse)
+print(f"Root Mean Squared Error: {rmse}")
+
+# Use the model to forecast future inflation rates
+# For example, to forecast the inflation rate for the next month given its predictors
+next_month_predictors = X.iloc[-1].values.reshape(1, -1)
+next_month_inflation_rate = model.predict(next_month_predictors)
+print(f"Forecasted inflation rate for the next month: {next_month_inflation_rate[0]}")
+
+#For 3 month model
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LassoCV
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import TimeSeriesSplit
+import math
+
+# Load the data
+url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
+df = pd.read_excel(url, header=None)
+
+# Compute the inflation rate
+df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+
+# Transform the predictors into log difference
+df.iloc[5:] = (np.log(df.iloc[5:]) - np.log(df.iloc[5:].shift(1))) * 12
+
+# Prepare the data for machine learning
+# Shift the target variable 3 months into the future
+y = df.iloc[1].shift(-3)
+
+# The predictor variables are the transformed price levels of the subcategories of consumer goods
+X = df.iloc[5:].T
+
+# Remove the first row (NaN value due to the shift operation) and the last 3 rows (NaN values due to the shift operation on y)
+X = X.iloc[1:-3]
+y = y.iloc[1:-3]
+
+# Implement a time series split for cross-validation
+tscv = TimeSeriesSplit(n_splits=5)
+
+# Train a LASSO regression model
+model = LassoCV(cv=tscv)
+model.fit(X, y)
+
+# Evaluate the model
+mse = mean_squared_error(y, model.predict(X))
+rmse = math.sqrt(mse)
+print(f"Root Mean Squared Error: {rmse}")
+
+# Use the model to forecast the inflation rate 3 months ahead
+# For example, to forecast the inflation rate for the 3rd month from the last month in the dataset given its predictors
+third_month_predictors = X.iloc[-1].values.reshape(1, -1)
+third_month_inflation_rate = model.predict(third_month_predictors)
+print(f"Forecasted inflation rate for the 3rd month from the last month: {third_month_inflation_rate[0]}")
+
+#For 12 month model
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LassoCV
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import TimeSeriesSplit
+import math
+
+# Load the data
+url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
+df = pd.read_excel(url, header=None)
+
+# Compute the inflation rate
+df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+
+# Transform the predictors into log difference
+df.iloc[5:] = (np.log(df.iloc[5:]) - np.log(df.iloc[5:].shift(1))) * 12
+
+# Prepare the data for machine learning
+# Shift the target variable 12 months into the future
+y = df.iloc[1].shift(-12)
+
+# The predictor variables are the transformed price levels of the subcategories of consumer goods
+X = df.iloc[5:].T
+
+# Remove the first row (NaN value due to the shift operation) and the last 12 rows (NaN values due to the shift operation on y)
+X = X.iloc[1:-12]
+y = y.iloc[1:-12]
+
+# Implement a time series split for cross-validation
+tscv = TimeSeriesSplit(n_splits=5)
+
+# Train a LASSO regression model
+model = LassoCV(cv=tscv)
+model.fit(X, y)
+
+# Evaluate the model
+mse = mean_squared_error(y, model.predict(X))
+rmse = math.sqrt(mse)
+print(f"Root Mean Squared Error: {rmse}")
+
+# Use the model to forecast the inflation rate 12 months ahead
+# For example, to forecast the inflation rate for the 12th month from the last month in the dataset given its predictors
+twelfth_month_predictors = X.iloc[-1].values.reshape(1, -1)
+twelfth_month_inflation_rate = model.predict(twelfth_month_predictors)
+print(f"Forecasted inflation rate for the 12th month from the last month: {twelfth_month_inflation_rate[0]}")
+
+##Testing
+# Load the testing data
+test_url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_testing_fake.xlsx"
+test_df = pd.read_excel(test_url, header=None)
+
+# Compute the inflation rate for the testing data
+test_df.iloc[1] = (np.log(test_df.iloc[1]) - np.log(test_df.iloc[1].shift(1))) * 12
+
+# Transform the predictors into log difference for the testing data
+test_df.iloc[5:] = (np.log(test_df.iloc[5:]) - np.log(test_df.iloc[5:].shift(1))) * 12
+
+# Prepare the testing data for machine learning
+# The predictor variables are the transformed price levels of the subcategories of consumer goods
+test_X = test_df.iloc[5:].T
+
+# Remove the first row (NaN value due to the shift operation)
+test_X = test_X.iloc[1:]
+
+# Use the model to forecast the inflation rate 12 months ahead for the testing data
+# For example, to forecast the inflation rate for the 12th month from the last month in the testing dataset given its predictors
+twelfth_month_predictors_test = test_X.iloc[-1].values.reshape(1, -1)
+twelfth_month_inflation_rate_test = model.predict(twelfth_month_predictors_test)
+print(f"Forecasted inflation rate for the 12th month from the last month in the testing dataset: {twelfth_month_inflation_rate_test[0]}")
+
+
+
+
+
+
+
+
+##Random forest method
+#For 1 month model
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+
+# Load the data
+url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
+df = pd.read_excel(url, header=None)
+
+# Compute the inflation rate
+df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+
+# Transform the predictors into log difference
+df.iloc[5:] = (np.log(df.iloc[5:]) - np.log(df.iloc[5:].shift(1))) * 12
+
+# Prepare the data for machine learning
+X = df.iloc[5:].T
+y = df.iloc[1]
+
+# Remove the first row as it contains NaN due to the shift operation
+X = X.iloc[1:]
+y = y.iloc[1:]
+
+# Split the data into training and testing sets in a time series manner
+tscv = TimeSeriesSplit(n_splits=5)
+for train_index, test_index in tscv.split(X):
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+    # Train a Random Forest model
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    print(f"Mean Squared Error: {mse}")
+
+# Use the model to forecast future inflation rates
+# For example, to predict the inflation rate for the next month given its predictors
+next_month_predictors = X.iloc[-1].values.reshape(1, -1)
+next_month_inflation_rate = model.predict(next_month_predictors)
+print(f"Predicted inflation rate for next month: {next_month_inflation_rate[0]}")
+
+#For 3 month model
+# Shift the target variable three months back
+y = y.shift(-3)
+
+# Remove the last three rows as they contain NaN due to the shift operation
+X = X.iloc[:-3]
+y = y.iloc[:-3]
+
+# Split the data into training and testing sets in a time series manner
+tscv = TimeSeriesSplit(n_splits=5)
+for train_index, test_index in tscv.split(X):
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+    # Train a Random Forest model
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    print(f"Mean Squared Error: {mse}")
+
+# Use the model to forecast future inflation rates
+# For example, to predict the inflation rate for the next three months given its predictors
+next_quarter_predictors = X.iloc[-1].values.reshape(1, -1)
+next_quarter_inflation_rate = model.predict(next_quarter_predictors)
+print(f"Predicted inflation rate for next quarter: {next_quarter_inflation_rate[0]}")
+
+#For 12 month model
+# Shift the target variable twelve months back
+y = y.shift(-12)
+
+# Remove the last twelve rows as they contain NaN due to the shift operation
+X = X.iloc[:-12]
+y = y.iloc[:-12]
+
+# Split the data into training and testing sets in a time series manner
+tscv = TimeSeriesSplit(n_splits=5)
+for train_index, test_index in tscv.split(X):
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+    # Train a Random Forest model
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    print(f"Mean Squared Error: {mse}")
+
+# Use the model to forecast future inflation rates
+# For example, to predict the inflation rate for the next twelve months given its predictors
+next_year_predictors = X.iloc[-1].values.reshape(1, -1)
+next_year_inflation_rate = model.predict(next_year_predictors)
+print(f"Predicted inflation rate for next year: {next_year_inflation_rate[0]}")
+
+##Testing
+# Load the testing data
+url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_testing_fake.xlsx"
+df_test = pd.read_excel(url, header=None)
 
 # Compute the inflation rate
 df_test.iloc[1] = (np.log(df_test.iloc[1]) - np.log(df_test.iloc[1].shift(1))) * 12
 
-# Extract features
-X_test = df_test.iloc[5:].T
+# Transform the predictors into log difference
+df_test.iloc[5:] = (np.log(df_test.iloc[5:]) - np.log(df_test.iloc[5:].shift(1))) * 12
 
-# Remove the first row (it contains NaN due to the shift operation)
+# Prepare the data for machine learning
+X_test = df_test.iloc[5:].T
+y_test = df_test.iloc[1]
+
+# Remove the first row as it contains NaN due to the shift operation
+X_test = X_test.iloc[1:]
+y_test = y_test.iloc[1:]
+
+# Use the model to make predictions on the testing data
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+mse = mean_squared_error(y_test, y_pred)
+print(f"Mean Squared Error on testing data: {mse}")
+
+
+
+
+
+##Gradient boosting method
+#For 1 month model
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_squared_error
+import math
+
+# Load the data
+url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
+df = pd.read_excel(url, header=None)
+
+# Compute the inflation rate
+df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+
+# Transform the predictors into log difference
+df.iloc[5:] = (np.log(df.iloc[5:]) - np.log(df.iloc[5:].shift(1))) * 12
+
+# Prepare the data for machine learning
+X = df.iloc[5:].transpose()
+y = df.iloc[1]
+
+# Remove the first row as it contains NaN due to the shift operation
+X = X.iloc[1:]
+y = y.iloc[1:]
+
+# Split the data into training and validation sets
+tscv = TimeSeriesSplit(n_splits=5)
+for train_index, test_index in tscv.split(X):
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+    # Train a Gradient Boosting model
+    model = GradientBoostingRegressor()
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = math.sqrt(mse)
+    print(f"Root Mean Squared Error: {rmse}")
+
+# Now the model can be used to forecast future inflation rates
+
+#For 3 months model
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_squared_error
+import math
+
+# Load the data
+url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
+df = pd.read_excel(url, header=None)
+
+# Compute the inflation rate
+df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+
+# Transform the predictors into log difference
+df.iloc[5:] = (np.log(df.iloc[5:]) - np.log(df.iloc[5:].shift(1))) * 12
+
+# Prepare the data for machine learning
+X = df.iloc[5:].transpose()
+y = df.iloc[1]
+
+# Shift y 3 months ahead for 3-month-ahead forecast
+y = y.shift(-3)
+
+# Remove the first row as it contains NaN due to the shift operation
+X = X.iloc[1:-3]
+y = y.iloc[1:-3]
+
+# Split the data into training and validation sets
+tscv = TimeSeriesSplit(n_splits=5)
+for train_index, test_index in tscv.split(X):
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+    # Train a Gradient Boosting model
+    model = GradientBoostingRegressor()
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = math.sqrt(mse)
+    print(f"Root Mean Squared Error: {rmse}")
+
+# Now the model can be used to forecast future inflation rates 3 months ahead
+
+#For 12 months model
+# Shift y 12 months ahead for 12-month-ahead forecast
+y = y.shift(-12)
+
+# Remove the first row as it contains NaN due to the shift operation
+X = X.iloc[1:-12]
+y = y.iloc[1:-12]
+
+# Split the data into training and validation sets
+tscv = TimeSeriesSplit(n_splits=5)
+for train_index, test_index in tscv.split(X):
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+    # Train a Gradient Boosting model
+    model = GradientBoostingRegressor()
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = math.sqrt(mse)
+    print(f"Root Mean Squared Error: {rmse}")
+
+# Now the model can be used to forecast future inflation rates 12 months ahead
+
+##Testing
+# Load the testing data
+test_url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_testing_fake.xlsx"
+test_df = pd.read_excel(test_url, header=None)
+
+# Compute the inflation rate for the testing data
+test_df.iloc[1] = (np.log(test_df.iloc[1]) - np.log(test_df.iloc[1].shift(1))) * 12
+
+# Transform the predictors into log difference for the testing data
+test_df.iloc[5:] = (np.log(test_df.iloc[5:]) - np.log(test_df.iloc[5:].shift(1))) * 12
+
+# Prepare the testing data for machine learning
+X_test = test_df.iloc[5:].transpose()
+
+# Remove the first row as it contains NaN due to the shift operation
 X_test = X_test.iloc[1:]
 
-# Create lagged features
-X_test_lagged, _ = create_lagged_features(X_test, None, 1)
-
 # Use the trained model to make predictions
-y_pred_test = model.predict(X_test_lagged)
+y_pred = model.predict(X_test)
 
-# Visualize the results
-plt.plot(X_test_lagged.index, y_pred_test, label='Predicted')
-plt.legend()
-plt.show()
+# Print the predictions
+print(y_pred)
