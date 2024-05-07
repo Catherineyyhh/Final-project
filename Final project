@@ -1,5 +1,6 @@
 ##AR(1) method training
 #For 1 month model
+!pip install pandas
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -12,15 +13,15 @@ url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_train
 df = pd.read_excel(url, header=None)
 
 # Compute the inflation rate
-df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+df.iloc[:, 1] = (np.log(df.iloc[:, 1]) - np.log(df.iloc[:, 1].shift(1))) * 12
 
 # Transform the predictors
-for i in range(5, df.shape[0]):
-    df.iloc[i] = (np.log(df.iloc[i]) - np.log(df.iloc[i].shift(1))) * 12
+for i in range(5, df.shape[1]):
+    df.iloc[:, i] = (np.log(df.iloc[:, i]) - np.log(df.iloc[:, i].shift(1))) * 12
 
 # Prepare the data for machine learning
-X = df.iloc[5:].T
-y = df.iloc[1]
+X = df.iloc[:, 5:].T
+y = df.iloc[:, 1]
 
 # Remove the first row as it contains NaN
 X = X.iloc[1:]
@@ -51,6 +52,7 @@ model_fit = model.fit()
 # Forecast the inflation rate 1 month ahead
 forecast = model_fit.predict(start=len(y), end=len(y), dynamic=False)
 print(f"Forecast for 1 month ahead: {forecast}")
+
 
 #For 3 month model
 import pandas as pd
