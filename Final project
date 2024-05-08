@@ -20,7 +20,7 @@ for i in range(5, df.shape[1]):
     df.iloc[:, i] = (np.log(df.iloc[:, i]) - np.log(df.iloc[:, i].shift(1))) * 12
 
 # Prepare the data for machine learning
-X = df.iloc[:, 5:].T
+X = df.iloc[5:].T
 y = df.iloc[:, 1]
 
 # Remove the first row as it contains NaN
