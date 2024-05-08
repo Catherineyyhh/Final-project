@@ -13,28 +13,45 @@ url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_train
 df = pd.read_excel(url, header=None)
 
 # Compute the inflation rate
-df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+df.iloc[:, 1] = (np.log(df.iloc[:, 1]) - np.log(df.iloc[:, 1].shift(1))) * 12
 
-# Prepare the predictors and target
-X = df.iloc[5:].T
-y = df.iloc[1]
+# Transform the predictors
+for i in range(5, df.shape[1]):
+    df.iloc[:, i] = (np.log(df.iloc[:, i]) - np.log(df.iloc[:, i].shift(1))) * 12
 
-# Remove the first row (it contains NaN due to the shift operation)
+# Prepare the data for machine learning
+X = df.iloc[:, 5:].T
+y = df.iloc[:, 1]
+
+# Remove the first row as it contains NaN
 X = X.iloc[1:]
 y = y.iloc[1:]
 
-# Transform the predictors into log difference
-X = (np.log(X) - np.log(X.shift(1))) * 12
+# Implement time series cross-validation
+tscv = TimeSeriesSplit(n_splits=5)
 
-# Fit an AR(1) model
+for train_index, test_index in tscv.split(X):
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+    # Train an AR(1) model
+    model = AutoReg(y_train, lags=1)
+    model_fit = model.fit()
+
+    # Make predictions
+    y_pred = model_fit.predict(start=len(y_train), end=len(y_train)+len(y_test)-1, dynamic=False)
+
+    # Evaluate the model
+    mse = mean_squared_error(y_test, y_pred)
+    print(f"Mean Squared Error: {mse}")
+
+# Train the AR(1) model on the entire dataset
 model = AutoReg(y, lags=1)
 model_fit = model.fit()
 
-# Make a 1-month ahead forecast
-forecast = model_fit.predict(start=len(y), end=len(y))
-
-print(f"1-month ahead forecast: {forecast[0]}")
-
+# Forecast the inflation rate 1 month ahead
+forecast = model_fit.predict(start=len(y), end=len(y), dynamic=False)
+print(f"Forecast for 1 month ahead: {forecast}")
 
 #For 3 month model
 import pandas as pd
