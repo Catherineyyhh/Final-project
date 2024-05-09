@@ -28,6 +28,8 @@ X = X.iloc[1:]
 y = y.iloc[1:]
 
 # Implement time series cross-validation
+from sktime.cross_validation import TimeSeriesSplit
+
 tscv = TimeSeriesSplit(n_splits=5)
 
 for train_index, test_index in tscv.split(X):
