@@ -11,6 +11,8 @@ from statsmodels.tsa.ar_model import AutoReg
 # Load the data
 url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
 df = pd.read_excel(url, header=None)
+df = df.drop(df.columns[0], axis=1)
+df = df.T
 
 # Compute the inflation rate
 df.iloc[:, 1] = (np.log(df.iloc[:, 1]) - np.log(df.iloc[:, 1].shift(1))) * 12
@@ -20,15 +22,15 @@ for i in range(5, df.shape[1]):
     df.iloc[:, i] = (np.log(df.iloc[:, i]) - np.log(df.iloc[:, i].shift(1))) * 12
 
 # Prepare the data for machine learning
-X = df.iloc[5:].T
+X = df.iloc[:, 5:].T
 y = df.iloc[:, 1]
 
 # Remove the first row as it contains NaN
-X = X.iloc[1:]
+X = X.iloc[:, 1:]
 y = y.iloc[1:]
 
 # Implement time series cross-validation
-from sktime.cross_validation import TimeSeriesSplit
+from sklearn.model_selection import TimeSeriesSplit
 
 tscv = TimeSeriesSplit(n_splits=5)
 
@@ -37,7 +39,7 @@ for train_index, test_index in tscv.split(X):
     y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
     # Train an AR(1) model
-    model = AutoReg(y_train, lags=1)
+    model = AutoReg(y_train.values, lags=1)
     model_fit = model.fit()
 
     # Make predictions
@@ -48,7 +50,7 @@ for train_index, test_index in tscv.split(X):
     print(f"Mean Squared Error: {mse}")
 
 # Train the AR(1) model on the entire dataset
-model = AutoReg(y, lags=1)
+model = AutoReg(y.values, lags=1)
 model_fit = model.fit()
 
 # Forecast the inflation rate 1 month ahead
