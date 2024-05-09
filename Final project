@@ -221,16 +221,20 @@ import math
 # Load the data
 url = "https://github.com/zhentaoshi/Econ5821/raw/main/data_example/US_PCE_training.xlsx"
 df = pd.read_excel(url, header=None)
+df = df.drop(df.columns[0], axis=1)
+df = df.T
+
 
 # Compute the inflation rate
-df.iloc[1] = (np.log(df.iloc[1]) - np.log(df.iloc[1].shift(1))) * 12
+df.iloc[:, 1] = (np.log(df.iloc[:, 1]) - np.log(df.iloc[:, 1].shift(1))) * 12
 
 # Transform the predictors into log difference
-df.iloc[5:] = (np.log(df.iloc[5:]) - np.log(df.iloc[5:].shift(1))) * 12
+for i in range(5, df.shape[1]):
+    df.iloc[:, i] = (np.log(df.iloc[:, i]) - np.log(df.iloc[:, i].shift(1))) * 12
 
 # Prepare the data for machine learning
-X = df.iloc[5:].T
-y = df.iloc[1]
+X = df.iloc[:, 5:]
+y = df.iloc[:, 1]
 
 # Remove the first row (NaN value due to the shift operation)
 X = X.iloc[1:]
